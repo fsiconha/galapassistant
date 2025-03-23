@@ -6,10 +6,16 @@ authors = [
     {name = "Felipe Siconha",email = "felipesiconha@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<4"
 dependencies = [
     "django (>=3.2,<4.0)",
-    "pytest (>=8.3.5,<9.0.0)"
+    "pytest (>=8.3.5,<9.0.0)",
+    "python-decouple (>=3.8,<4.0)",
+    "django-environ (>=0.12.0,<0.13.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "langchain (>=0.3.21,<0.4.0)",
+    "langchain-community (>=0.3.20,<0.4.0)",
+    "langchain-huggingface (>=0.1.2,<0.2.0)",
 ]
 
 

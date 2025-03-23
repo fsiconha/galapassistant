@@ -1,12 +1,12 @@
 from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse
+from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
 
 
 def chat_view(request: HttpRequest) -> HttpResponse:
     """
-    Render the chat page. On POST, if the user provides a non-empty query,
-    return a response that includes 'Hello, world' followed by the query.
-    The assistant's message is only visible after the user submits a query.
+    Render the chat page. On POST, use the AssistantLLMService to generate a response
+    from the LLM based on the user's query.
 
     Args:
         request (HttpRequest): The incoming HTTP request.
@@ -18,5 +18,6 @@ def chat_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         query = request.POST.get("query", "").strip()
         if query:
-            response_text = f"Hello, world: {query}"
+            assistant = AssistantLLMService()
+            response_text = assistant.get_response(query)
     return render(request, "chat.html", {"response": response_text})
