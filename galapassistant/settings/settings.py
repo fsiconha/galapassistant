@@ -1,9 +1,16 @@
+import environ
 import os
+from pathlib import Path
+import secrets
+
+from dotenv import load_dotenv
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-SECRET_KEY = "dummy-secret-key-for-development"
+SECRET_KEY = secrets.token_hex(25)
+HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 DEBUG = True
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 USE_TZ = False
