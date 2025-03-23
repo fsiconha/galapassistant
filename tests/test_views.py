@@ -2,12 +2,19 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
+from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
+
+
 @pytest.fixture
 def client():
     """
     Fixture that returns a Django test client.
     """
     return Client()
+
+def fake_get_response(self, query: str) -> str:
+    """Return a fake assistant response for testing."""
+    return f"Fake assistant response for: {query}"
 
 @pytest.mark.django_db
 def test_chat_view_get(client):
@@ -40,3 +47,5 @@ def test_chat_view_post_with_query(client):
     content = response.content.decode()
     assert response.status_code == 200
     assert len(content.strip()) > 50, "Expected a non-empty assistant response."
+    expected_response = f"Fake assistant response for: {test_query}"
+    assert response.status_code == 200, "Expected a 200 OK response."
