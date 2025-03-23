@@ -37,15 +37,18 @@ def test_chat_view_post_empty_query(client):
     assert response.status_code == 200
 
 @pytest.mark.django_db
-def test_chat_view_post_with_query(client):
+def test_chat_view_post_with_query(client, monkeypatch):
     """
     Test that a POST request with a non-empty query returns a non-empty assistant response.
     """
+    monkeypatch.setattr(AssistantLLMService, "get_response", fake_get_response)
+
     url = reverse("chat")
     test_query = "Test message"
     response = client.post(url, {"query": test_query})
     content = response.content.decode()
     assert response.status_code == 200
     assert len(content.strip()) > 50, "Expected a non-empty assistant response."
-    expected_response = f"Fake assistant response for: {test_query}"
     assert response.status_code == 200, "Expected a 200 OK response."
+    expected_response = f"Fake assistant response for: {test_query}"
+    assert expected_response in content, "Expected a fake assistant response in the HTML output."
