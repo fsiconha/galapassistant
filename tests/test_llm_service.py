@@ -27,7 +27,7 @@ def llm_service(monkeypatch: pytest.MonkeyPatch) -> AssistantLLMService:
         AssistantLLMService: The service instance with patched LLM.
     """
     service = AssistantLLMService()
-    # Patch the instance's llm attribute so that calling it returns a controlled output.
+    # Monkeypatch the instance's llm attribute so that calling it returns a controlled output.
     monkeypatch.setattr(service, "llm", fake_llm)
     return service
 

@@ -62,7 +62,7 @@ class EmbeddingService:
 
         return doc_chunks_unique
 
-    def build_vector_database(self, doc_chunks):
+    def build_vector_database(self, doc_chunks):   ### PRECISA CACHEAR DE ALGUMA FORMA OU OTIMIZAR. Como usar o retriever sem buildar o vector store toda hora?
         embedding_model = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             multi_process=True,
