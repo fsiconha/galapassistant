@@ -2,6 +2,10 @@ import os
 import sys
 
 
+current_path = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.join(current_path, "..")
+sys.path.insert(0, repo_root)
+
 def main():
     """Run administrative tasks."""
     os.environ.setdefault(
