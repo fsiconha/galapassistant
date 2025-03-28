@@ -1,6 +1,17 @@
 import os
+# Disable parallelism for tokenizers to avoid fork-related warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+
+import multiprocessing
+# Change the start method to spawn (especially useful on macOS)
+multiprocessing.set_start_method("spawn", force=True)
+
 from typing import List, Optional
 
+import faiss
+from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
@@ -8,29 +19,66 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from transformers import AutoTokenizer
 
+import torch
+torch.set_num_threads(1)
 
-EMBEDDING_MODEL_NAME = "thenlper/gte-small"
-CHUNK_SIKE = 512
+
+EMBEDDING_MODEL_NAME = "thenlper/gte-small" #Other models: "BAAI/bge-m3", "sentence-transformers/all-MiniLM-L6-v2", "intfloat/multilingual-e5-small"
+CHUNK_SIKE = 500
 MARKDOWN_SEPARATORS = [
     "\n\n",
     "\n",
-    ".",
-    " ",
+    # ".",
+    # " ",
 ]
 
 class EmbeddingService:
-    def load_knowledge_base(file_path: str) -> List[LangchainDocument]:
+    """
+    Service for loading a knowledge base and building a vector database for document retrieval.
+    """
+    def load_knowledge_base(self, file_path: str) -> List[LangchainDocument]:
+        """
+        Loads the knowledge base from a text file.
+        Opens the file specified by 'file_path', reads its entire content, and returns
+        a list containing a single LangChain Document with the file content.
+
+        Args:
+            file_path (str): The path to the text file containing the knowledge base.
+
+        Returns:
+            List[LangchainDocument]: A list with one Document containing the file content.
+        """
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        return [LangchainDocument(page_content=content)]   
+        return [LangchainDocument(page_content=content)]
 
-    def split_data(
+    def build_vector_database(
         self,
-        chunk_size: int = CHUNK_SIKE,
+        chunk_size: Optional[int] = CHUNK_SIKE,
         knowledge_base: Optional[List[LangchainDocument]] = None,
         tokenizer_name: Optional[str] = EMBEDDING_MODEL_NAME,
-    ) -> List[LangchainDocument]:
+    ):
+        """
+        Builds a FAISS vector database from the provided knowledge base.
+
+        If no knowledge base is provided, it loads the default knowledge base from a file.
+        The text is split into chunks using a RecursiveCharacterTextSplitter with a specified
+        chunk size and overlap. Then, each document chunk is embedded using a HuggingFace model,
+        and the resulting embeddings are stored in a FAISS index for fast similarity search using
+        cosine distance.
+
+        Args:
+            chunk_size (Optional[int], optional): The maximum number of tokens in each chunk.
+                Defaults to CHUNK_SIKE.
+            knowledge_base (Optional[List[LangchainDocument]], optional): A list of documents
+                to build the vector database. If not provided, the default knowledge base file is used.
+            tokenizer_name (Optional[str], optional): The name of the HuggingFace model used for
+                tokenization and embeddings. Defaults to EMBEDDING_MODEL_NAME.
+
+        Returns:
+            FAISS: An instance of the FAISS vector store built from the document chunks.
+        """
         if knowledge_base is None:
             file_path = os.path.join(
                 os.path.dirname(__file__),
@@ -40,29 +88,21 @@ class EmbeddingService:
             )
             knowledge_base = self.load_knowledge_base(file_path)
 
-        text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-            AutoTokenizer.from_pretrained(tokenizer_name),
-            chunk_size=chunk_size,
-            chunk_overlap=int(chunk_size / 10),
-            add_start_index=True,
-            strip_whitespace=True,
-            separators=MARKDOWN_SEPARATORS,
+        text_splitter = (
+            RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+                AutoTokenizer.from_pretrained(tokenizer_name),
+                chunk_size=chunk_size,
+                chunk_overlap=int(chunk_size / 10),
+                add_start_index=True,
+                strip_whitespace=True,
+                separators=MARKDOWN_SEPARATORS,
+            )
         )
 
         doc_chunks = []
         for doc in knowledge_base:
             doc_chunks += text_splitter.split_documents([doc])
 
-        unique_texts = {}
-        doc_chunks_unique = []
-        for doc in doc_chunks:
-            if doc.page_content not in unique_texts:
-                unique_texts[doc.page_content] = True
-                doc_chunks_unique.append(doc)
-
-        return doc_chunks_unique
-
-    def build_vector_database(self, doc_chunks):
         embedding_model = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             multi_process=True,
@@ -71,7 +111,9 @@ class EmbeddingService:
         )
 
         knowledge_vector_database = FAISS.from_documents(
-            doc_chunks, embedding_model, distance_strategy=DistanceStrategy.COSINE
+            doc_chunks,
+            embedding_model,
+            distance_strategy=DistanceStrategy.COSINE,
         )
 
         return knowledge_vector_database

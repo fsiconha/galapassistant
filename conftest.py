@@ -5,6 +5,9 @@ from typing import List
 
 from langchain.docstore.document import Document as LangchainDocument
 
+from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
+
+
 
 os.environ.setdefault(
     'DJANGO_SETTINGS_MODULE', 'galapassistant.settings.settings'
