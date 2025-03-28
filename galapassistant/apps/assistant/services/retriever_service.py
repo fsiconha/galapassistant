@@ -2,16 +2,27 @@ from galapassistant.apps.assistant.services.embedding_service import EmbeddingSe
 
 
 class RetrieverService:
-    def __init__(self, query: str):
+    """
+    Service class for retrieving documents from a vector store based on a query.
+    """
+    def __init__(self):
         service = EmbeddingService()
         knowledge_vector_database = service.build_vector_database()
-        vector_store_retriever = knowledge_vector_database.as_retriever()
+        self.vector_store_retriever = knowledge_vector_database.as_retriever()
 
-        docs = vector_store_retriever.similarity_search(
-            query,
-            k=2,
+    def retrieve(self, query: str, k: int = 2) -> str:
+        """
+        Retrieves the top matching documents for the provided query.
+        
+        Args:
+            query (str): The input query text used to perform similarity search.
+            k (int, optional): The number of top documents to retrieve. Defaults to 2.
+        
+        Returns:
+            str: A formatted string containing the retrieved documents.
+        """
+        docs = self.vector_store_retriever.similarity_search(query, k=k)
+        result = "\nRetrieved documents:\n" + "".join(
+            [f"= Document {i} =\n{doc.page_content}\n" for i, doc in enumerate(docs)]
         )
-
-        return "\nRetrieved documents:\n" + "".join(
-            [f"= Document {str(i)} =\n" + doc.page_content for i, doc in enumerate(docs)]
-        )
+        return result
