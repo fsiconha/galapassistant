@@ -1,45 +1,43 @@
 import pytest
+
 from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
 
+class MockChain:
+    """A mock chain to simulate the rag_chain's invoke method."""
+    def __init__(self, response):
+        self.response = response
 
-def fake_llm(query: str) -> str:
-    """
-    Fake LLM function to simulate a response.
+    def invoke(self, query):
+        return self.response
 
-    Args:
-        query (str): The input query.
-
-    Returns:
-        str: A mock response based on the query.
-    """
-    return "Mock response for: " + query
-
+class ErrorChain:
+    """A mock chain that always raises an error when invoked."""
+    def invoke(self, query):
+        raise ValueError("Test error")
 
 @pytest.fixture
-def llm_service(monkeypatch: pytest.MonkeyPatch) -> AssistantLLMService:
+def mock_assistant_service():
     """
-    Fixture that returns an instance of AssistantLLMService with its LLM call patched.
-
-    Args:
-        monkeypatch (pytest.MonkeyPatch): The monkeypatch fixture.
-
-    Returns:
-        AssistantLLMService: The service instance with patched LLM.
+    Create an instance of AssistantLLMService without running __init__
+    and replace its rag_chain with a MockChain.
     """
-    service = AssistantLLMService()
-    # Monkeypatch the instance's llm attribute so that calling it returns a controlled output.
-    monkeypatch.setattr(service, "llm", fake_llm)
+    service = AssistantLLMService.__new__(AssistantLLMService)
+    service.rag_chain = MockChain("mock response")
     return service
 
-
-def test_get_response(llm_service: AssistantLLMService):
+def test_get_response_returns_mock_response(mock_assistant_service):
     """
-    Test that get_response returns the expected response from the LLM service.
-
-    Args:
-        llm_service (AssistantLLMService): The patched LLM service fixture.
+    Test that get_response returns the expected mock response.
     """
-    query = "Hello"
-    expected = "Mock response for: Hello"
-    response = llm_service.get_response(query)
-    assert response == expected
+    query = "What is evolution?"
+    response = mock_assistant_service.get_response(query)
+    assert response == "mock response"
+
+def test_get_response_propagates_error():
+    """
+    Test that if the underlying chain raises an error, it is propagated.
+    """
+    service = AssistantLLMService.__new__(AssistantLLMService)
+    service.rag_chain = ErrorChain()
+    with pytest.raises(ValueError, match="Test error"):
+        service.get_response("Any query")
