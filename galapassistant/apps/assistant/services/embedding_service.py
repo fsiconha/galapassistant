@@ -1,7 +1,17 @@
 import os
+# Disable parallelism for tokenizers to avoid fork-related warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
+
+import multiprocessing
+# Change the start method to spawn (especially useful on macOS)
+multiprocessing.set_start_method("spawn", force=True)
+
 from typing import List, Optional
 
-# from langchain_community.docstore.in_memory import InMemoryDocstore
+import faiss
+from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
@@ -9,9 +19,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from transformers import AutoTokenizer
 
+import torch
+torch.set_num_threads(1)
 
-EMBEDDING_MODEL_NAME = "thenlper/gte-small"
-CHUNK_SIKE = 512
+
+EMBEDDING_MODEL_NAME = "thenlper/gte-small" #"sentence-transformers/all-mpnet-base-v2"
+CHUNK_SIKE = 500
 MARKDOWN_SEPARATORS = [
     "\n\n",
     "\n",
@@ -56,24 +69,25 @@ class EmbeddingService:
         for doc in knowledge_base:
             doc_chunks += text_splitter.split_documents([doc])
 
-        unique_texts = {}
-        doc_chunks_unique = []
-        for doc in doc_chunks:
-            if doc.page_content not in unique_texts:
-                unique_texts[doc.page_content] = True
-                doc_chunks_unique.append(doc)
-
         embedding_model = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
-            # multi_process=True,
-            # model_kwargs={"device": "cpu"},
+            multi_process=True,
+            model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True},
         )
 
+        # index = faiss.IndexFlatL2(len(OpenAIEmbeddings().embed_query("hello world")))
+        # vector_store = FAISS(
+        #     embedding_function=embedding_model,
+        #     index=index,
+        #     docstore=InMemoryDocstore(),
+        #     index_to_docstore_id={}
+        # )
+
         knowledge_vector_database = FAISS.from_documents(
-            doc_chunks_unique,
+            doc_chunks,
             embedding_model,
-            distance_strategy=DistanceStrategy.COSINE
+            distance_strategy=DistanceStrategy.COSINE,
         )
 
         return knowledge_vector_database
