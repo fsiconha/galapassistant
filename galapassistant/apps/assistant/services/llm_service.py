@@ -1,19 +1,17 @@
 import os
 from dotenv import load_dotenv
-from langchain.chains import LLMChain
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain.prompts import ChatPromptTemplate
-# from smolagents import HfApiModel
 
-from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
-from galapassistant.apps.assistant.services.retriever_service import RetrieverService
+from galapassistant.apps.assistant.services.retriever_service import EmbeddingService
+# from galapassistant.apps.assistant.services.retriever_service import RetrieverService
 
 
 load_dotenv()
 
-LLM_MODEL_NAME = "HuggingFaceH4/zephyr-7b-beta" #"MaziyarPanahi/calme-3.1-instruct-78b"
+LLM_MODEL_NAME = "HuggingFaceH4/zephyr-7b-beta" ##Other models: "MaziyarPanahi/calme-3.1-instruct-78b", "meta-llama/Llama-3.1-70B-Instruct"
 FILE_PATH = os.path.join(
     os.path.dirname(__file__),
     "..",
@@ -29,21 +27,15 @@ class AssistantLLMService:
         """
         Initializes the AssistantLLMService by creating an instance of the LLM.
         """
-        # self.model = HfApiModel(
-        #     model_id=LLM_MODEL_NAME, ### "meta-llama/Llama-3.1-70B-Instruct",
-        #     token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
-        # )
-
         llm = HuggingFaceEndpoint(
             repo_id=LLM_MODEL_NAME,
             huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
             temperature=0.7,
             max_new_tokens=256,
         )
-
         prompt_template = """
-            Answer the question based only on the following context.
-            Provide the number of the source document when relevant.
+            Using the information contained in the context, give a comprehensive answer to the question.
+            Respond only to the question asked, response should be concise and relevant to the question.
             If the answer cannot be deduced from the context, do not give an answer.
             The context is a book called The Origin of Species,
             and it introduces the theory of evolution by natural selection,
@@ -51,39 +43,14 @@ class AssistantLLMService:
             Question: {question}
         """
         prompt = ChatPromptTemplate.from_template(prompt_template)
-
         vector_store = EmbeddingService().build_vector_database()
         retriever = vector_store.as_retriever()
-
         self.rag_chain = (
             {"context": retriever, "question": RunnablePassthrough()}
             | prompt
             | llm
             | StrOutputParser()
         )
-
-        # prompt_in_chat_format = [
-        #     {
-        #         "role": "system",
-        #         "content": """Using the information contained in the context,
-        # give a comprehensive answer to the question.
-        # Respond only to the question asked, response should be concise and relevant to the question.
-        # Provide the number of the source document when relevant.
-        # If the answer cannot be deduced from the context, do not give an answer.""",
-        #     },
-        #     {
-        #         "role": "user",
-        #         "content": """Context:
-        # {context}
-        # ---
-        # Now here is the question you need to answer.
-
-        # Question: {question}""",
-        #     },
-        # ]
-        # self.rag_prompt_template = self.tokenizer.apply_chat_template(
-        #     prompt_in_chat_format, tokenize=False, add_generation_prompt=True
-        # )
 
     def get_response(self, user_query: str) -> str:
         """
