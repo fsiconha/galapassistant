@@ -3,25 +3,13 @@ from django.test import RequestFactory
 from galapassistant.apps.chat.views import rag_chat_view
 
 
-class MockAssistant:
-    def get_response(self, query: str) -> str:
-        return f"Mock response for: {query}"
-
 @pytest.fixture
 def request_factory():
     return RequestFactory()
 
-@pytest.fixture(autouse=True)
-def patch_assistant(monkeypatch):
-    """
-    Automatically patch the global assistant variable in the views module with a mock assistant.
-    """
-    mock_assistant = MockAssistant()
-    monkeypatch.setattr("galapassistant.apps.chat.views", mock_assistant)
-
 def test_rag_chat_view_get(request_factory):
     """
-    Test that a GET request to the rag_chat_view returns the chat form with an empty response.
+    Test that a GET request to rag_chat_view returns the chat form with an empty response.
     """
     request = request_factory.get("/")
     response = rag_chat_view(request)
@@ -53,5 +41,4 @@ def test_rag_chat_view_post_with_query(request_factory):
     response = rag_chat_view(request)
     content = response.content.decode("utf-8")
     assert response.status_code == 200
-    assert isinstance(content, str)
-    assert len(content) >= 1
+    assert f"Mock response for: {query}" in content

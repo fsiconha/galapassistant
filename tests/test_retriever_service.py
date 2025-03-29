@@ -34,11 +34,12 @@ def test_retrieve_returns_formatted_output(monkeypatch):
     retriever = RetrieverService()
     k = 3
     query = "Test query"
-    result = retriever.retrieve(query, k=k)
-    expected = "\nRetrieved documents:\n" + "".join(
+    actual_result = retriever.retrieve(query, k=k)
+    actual_expected = "\nRetrieved documents:\n" + "".join(
         [f"= Document {i} =\nContent {i}\n" for i in range(k)]
     )
-    assert result == expected
+
+    assert actual_result == actual_expected
 
 
 def test_retrieve_empty(monkeypatch):
@@ -58,6 +59,6 @@ def test_retrieve_empty(monkeypatch):
     )
     retriever = RetrieverService()
     query = "Test query"
-    result = retriever.retrieve(query)
-    expected = "\nRetrieved documents:\n"
-    assert result == expected
+    actual_result = retriever.retrieve(query)
+    actual_expected = "\nRetrieved documents:\n"
+    assert actual_result == actual_expected
