@@ -7,10 +7,9 @@ class RetrieverService:
     """
     def __init__(self):
         service = EmbeddingService()
-        knowledge_vector_database = service.build_vector_database()
-        self.vector_store_retriever = knowledge_vector_database.as_retriever()
+        self.vector_store_retriever = service.build_vector_database()
 
-    def retrieve(self, query: str, k: int = 2) -> str:
+    def retrieve(self, query: str, k: int = 5) -> str:
         """
         Retrieves the top matching documents for the provided query.
         
