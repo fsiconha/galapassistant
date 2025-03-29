@@ -29,16 +29,16 @@ class AssistantLLMService:
         self.llm = HuggingFaceEndpoint(
             repo_id=LLM_MODEL_NAME,
             huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
-            temperature=0.7,
+            temperature=0.3,
             max_new_tokens=256,
         )
         prompt_instructions = [
             {
                 "role": "system",
-                "content": """ You are a specialized assistant that knows everything about the book The Origin of Species,
-                because you have this book as your knowledge base, aka context.
-                Respond only to the question asked, response should be concise, comprehensive and relevant to the question.
-                If the answer cannot be deduced from the context, do not give an answer.
+                "content": """ You are a specialized and polite assistant that knows everything about the book The Origin of Species,
+                because you have this book as your knowledge base.
+                Respond only to the question asked. Response should be concise, comprehensive and relevant to the question.
+                If the answer cannot be deduced from the context, do not give an answer and report this.
                 Here is the context, your knoledge base.
                 Context: {context}""",
             },
@@ -49,7 +49,7 @@ class AssistantLLMService:
             },
         ]
 
-        self.prompt = ChatPromptTemplate.from_messages(prompt_instructions)
+        self.prompt = ChatPromptTemplate(prompt_instructions)
 
     def get_response(self, user_query: str) -> str:
         """
