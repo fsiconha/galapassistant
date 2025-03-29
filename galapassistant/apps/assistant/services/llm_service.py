@@ -39,9 +39,6 @@ class AssistantLLMService:
                 because you have this book as your knowledge base, aka context.
                 Respond only to the question asked, response should be concise, comprehensive and relevant to the question.
                 If the answer cannot be deduced from the context, do not give an answer.
-                If necessary, fell free to generate two or three different versions of query for help you to respond the answer,
-                By generating multiple perspectives on the user question, your goal is to help
-                the user overcome some of the limitations of the distance-based similarity.
                 Here is the context, your knoledge base.
                 Context: {context}""",
             },
