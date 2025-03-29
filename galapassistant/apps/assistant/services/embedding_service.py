@@ -15,15 +15,14 @@ from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import AutoTokenizer
 
 import torch
 torch.set_num_threads(1)
 
 
-EMBEDDING_MODEL_NAME = "thenlper/gte-small" #Other models: "BAAI/bge-m3", "sentence-transformers/all-MiniLM-L6-v2", "intfloat/multilingual-e5-small"
+EMBEDDING_MODEL_NAME = "thenlper/gte-base"
 CHUNK_SIKE = 500
 MARKDOWN_SEPARATORS = [
     "\n\n",
@@ -88,27 +87,23 @@ class EmbeddingService:
             )
             knowledge_base = self.load_knowledge_base(file_path)
 
-        text_splitter = (
-            RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-                AutoTokenizer.from_pretrained(tokenizer_name),
-                chunk_size=chunk_size,
-                chunk_overlap=int(chunk_size / 10),
-                add_start_index=True,
-                strip_whitespace=True,
-                separators=MARKDOWN_SEPARATORS,
-            )
-        )
-
-        doc_chunks = []
-        for doc in knowledge_base:
-            doc_chunks += text_splitter.split_documents([doc])
-
         embedding_model = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             multi_process=True,
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True},
         )
+
+        text_splitter = (
+            SemanticChunker(
+                embeddings=embedding_model,
+                breakpoint_threshold_type="standard_deviation",
+            )
+        )
+
+        doc_chunks = []
+        for doc in knowledge_base:
+            doc_chunks += text_splitter.split_documents([doc])
 
         knowledge_vector_database = FAISS.from_documents(
             doc_chunks,
