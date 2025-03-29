@@ -51,4 +51,7 @@ def test_rag_chat_view_post_with_query(request_factory):
     query = "Who was Darwin?"
     request = request_factory.post("/", data={"query": query})
     response = rag_chat_view(request)
-    assert response
+    content = response.content.decode("utf-8")
+    assert response.status_code == 200
+    assert isinstance(content, str)
+    assert len(content) >= 1
