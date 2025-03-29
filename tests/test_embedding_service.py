@@ -1,7 +1,4 @@
-import os
-import tempfile
 import pytest
-
 from langchain.docstore.document import Document as LangchainDocument
 from galapassistant.apps.assistant.services.embedding_service import (
     EmbeddingService,
@@ -9,79 +6,90 @@ from galapassistant.apps.assistant.services.embedding_service import (
 )
 
 
-class MockTextSplitter:
-    """A mock text splitter that returns the input documents unchanged."""
+class DummyFAISS:
+    """A dummy FAISS vector store to simulate the FAISS index."""
+    def __init__(self, docs, embedding_model, distance_strategy):
+        self.docs = docs
+        self.embedding_model = embedding_model
+        self.distance_strategy = distance_strategy
 
+    def similarity_search(self, query, k=5):
+        return self.docs[:k]
+
+
+def dummy_from_documents(docs, embedding_model, distance_strategy):
+    """Return a DummyFAISS instance."""
+    return DummyFAISS(docs, embedding_model, distance_strategy)
+
+
+class MockSemanticChunker:
+    """A mock semantic chunker that splits each document into two chunks."""
     def split_documents(self, docs):
-        return docs
+        chunks = []
+        for doc in docs:
+            text = doc.page_content
+            mid = len(text) // 2
+            chunk1 = LangchainDocument(page_content=text[:mid])
+            chunk2 = LangchainDocument(page_content=text[mid:])
+            chunks.extend([chunk1, chunk2])
+        return chunks
 
 
 class MockEmbeddings:
-    """A mock embeddings class to bypass heavy computations."""
-
+    """A mock embeddings class that bypasses heavy computations."""
     def __init__(self, model_name, multi_process, model_kwargs, encode_kwargs):
         self.model_name = model_name
 
-
-def mock_faiss_from_documents(docs, embedding_model, distance_strategy):
-    """A mock replacement for FAISS.from_documents that returns a dict with inputs."""
-    return {
-        "docs": docs,
-        "embedding_model": embedding_model,
-        "distance_strategy": distance_strategy,
-    }
+    def embed_documents(self, documents):
+        return [f"dummy_embedding_{i}" for i, _ in enumerate(documents)]
 
 
-def test_load_knowledge_base(tmp_path):
+def test_load_knowledge_base(mock_knowledge_base):
     """
-    Test that load_knowledge_base reads a file and returns a single Document
-    whose page_content matches the file content.
+    Test that the mock_knowledge_base fixture returns a single Document
+    with a page_content string.
     """
-    content = "This is a test content for the knowledge base."
-    temp_file = tmp_path / "test.txt"
-    temp_file.write_text(content, encoding="utf-8")
-
-    service = EmbeddingService()
-    documents = service.load_knowledge_base(str(temp_file))
-
-    assert isinstance(documents, list)
-    assert len(documents) == 1
-    assert documents[0].page_content == content
+    assert isinstance(mock_knowledge_base, list)
+    assert len(mock_knowledge_base) == 1
+    assert hasattr(mock_knowledge_base[0], "page_content")
+    assert isinstance(mock_knowledge_base[0].page_content, str)
 
 
-def test_build_vector_database_with_custom_knowledge_base(monkeypatch):
+def test_build_vector_database_with_custom_knowledge_base(monkeypatch, mock_knowledge_base):
     """
     Test that build_vector_database correctly builds a vector database when a custom
     knowledge base is provided.
     """
     service = EmbeddingService()
-    test_doc = LangchainDocument(page_content="Test content for splitting.")
-    knowledge_base = [test_doc]
+    knowledge_base = mock_knowledge_base
 
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.AutoTokenizer.from_pretrained",
-        lambda name: "mock_tokenizer",
-    )
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.RecursiveCharacterTextSplitter.from_huggingface_tokenizer",
-        lambda tokenizer, chunk_size, chunk_overlap, add_start_index, strip_whitespace, separators: MockTextSplitter(),
+        "galapassistant.apps.assistant.services.embedding_service.SemanticChunker",
+        lambda *args, **kwargs: MockSemanticChunker()
     )
     monkeypatch.setattr(
         "galapassistant.apps.assistant.services.embedding_service.HuggingFaceEmbeddings",
-        MockEmbeddings,
+        MockEmbeddings
     )
-    MockFAISS = type("MockFAISS", (), {"from_documents": staticmethod(mock_faiss_from_documents)})
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.FAISS", MockFAISS
+        "galapassistant.apps.assistant.services.embedding_service.FAISS",
+        type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
-
-    result = service.build_vector_database(
-        chunk_size=100, knowledge_base=knowledge_base, tokenizer_name="mock_model"
+    actual_vector_store = service.build_vector_database(
+        chunk_size=100, knowledge_base=knowledge_base, tokenizer_name="dummy_model"
     )
+    expected_chunks = []
+    for doc in knowledge_base:
+        text = doc.page_content
+        mid = len(text) // 2
+        expected_chunks.extend([
+            LangchainDocument(page_content=text[:mid]),
+            LangchainDocument(page_content=text[mid:])
+        ])
 
-    assert isinstance(result, dict)
-    assert result["docs"] == knowledge_base
-    assert result["distance_strategy"] == DistanceStrategy.COSINE
+    assert isinstance(actual_vector_store, DummyFAISS)
+    assert actual_vector_store.docs == expected_chunks
+    assert actual_vector_store.distance_strategy == DistanceStrategy.COSINE
 
 
 def test_build_vector_database_with_default_knowledge_base(monkeypatch):
@@ -90,28 +98,28 @@ def test_build_vector_database_with_default_knowledge_base(monkeypatch):
     """
     service = EmbeddingService()
     default_doc = LangchainDocument(page_content="Default test content.")
-    monkeypatch.setattr(service, "load_knowledge_base", lambda file_path: [default_doc])
 
+    monkeypatch.setattr(service, "load_knowledge_base", lambda file_path: [default_doc])
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.AutoTokenizer.from_pretrained",
-        lambda name: "mock_tokenizer",
-    )
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.RecursiveCharacterTextSplitter.from_huggingface_tokenizer",
-        lambda tokenizer, chunk_size, chunk_overlap, add_start_index, strip_whitespace, separators: MockTextSplitter(),
+        "galapassistant.apps.assistant.services.embedding_service.SemanticChunker",
+        lambda *args, **kwargs: MockSemanticChunker()
     )
     monkeypatch.setattr(
         "galapassistant.apps.assistant.services.embedding_service.HuggingFaceEmbeddings",
-        MockEmbeddings,
+        MockEmbeddings
     )
-    MockFAISS = type("MockFAISS", (), {"from_documents": staticmethod(mock_faiss_from_documents)})
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.FAISS", MockFAISS
+        "galapassistant.apps.assistant.services.embedding_service.FAISS",
+        type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
-
-    result = service.build_vector_database(
-        chunk_size=100, knowledge_base=None, tokenizer_name="mock_model"
+    actual_vector_store = service.build_vector_database(
+        chunk_size=100, knowledge_base=None, tokenizer_name="dummy_model"
     )
-
-    assert isinstance(result, dict)
-    assert result["docs"] == [default_doc]
+    text = default_doc.page_content
+    mid = len(text) // 2
+    expected_chunks = [
+        LangchainDocument(page_content=text[:mid]),
+        LangchainDocument(page_content=text[mid:])
+    ]
+    assert isinstance(actual_vector_store, DummyFAISS)
+    assert actual_vector_store.docs == expected_chunks
