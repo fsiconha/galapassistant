@@ -17,5 +17,5 @@ def rag_chat_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         query = request.POST.get("query", "").strip()
         if query:
-            response_text = assistant.get_response(query)
+            response_text = assistant.generate_answer(query)
     return render(request, "chat.html", {"response": response_text})
