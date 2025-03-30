@@ -1,15 +1,30 @@
+from smolagents import Tool
+
 from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
 
 
-class RetrieverService:
+class RetrieverTool(Tool):
     """
-    Service class for retrieving documents from a vector store based on a query.
+    Tool for retrieving documents from a vector store based on a query.
     """
-    def __init__(self):
-        service = EmbeddingService()
-        self.vector_store_retriever = service.build_vector_database()
+    name = "retriever"
+    description = "Uses semantic search to retrieve the parts of transformers documentation that could be most relevant to answer your query."
+    inputs = {
+        "query": {
+            "type": "string",
+            "description": "The query to perform. This should be semantically close to your target documents. Use the affirmative form rather than a question.",
+        }
+    }
+    output_type = "string"
 
-    def retrieve(self, query: str, k: int = 5) -> str:
+    def __init__(self, docs, **kwargs):
+        super().__init__(**kwargs)
+        vector_store = EmbeddingService()
+        self.retriever = vector_store.from_documents(
+            docs, k=10
+        )
+
+    def forward(self, query: str) -> str:
         """
         Retrieves the top matching documents for the provided query.
         
@@ -20,8 +35,14 @@ class RetrieverService:
         Returns:
             str: A formatted string containing the retrieved documents.
         """
-        docs = self.vector_store_retriever.similarity_search(query, k=k)
-        result = "\nRetrieved documents:\n" + "".join(
-            [f"= Document {i} =\n{doc.page_content}\n" for i, doc in enumerate(docs)]
+        assert isinstance(query, str), "Your search query must be a string"
+
+        docs = self.retriever.invoke(
+            query,
         )
-        return result
+        return "\nRetrieved documents:\n" + "".join(
+            [
+                f"\n\n===== Document {str(i)} =====\n" + doc.page_content
+                for i, doc in enumerate(docs)
+            ]
+        )

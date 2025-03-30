@@ -1,6 +1,6 @@
 import pytest
 
-from galapassistant.apps.assistant.services.retriever_service import RetrieverService
+from galapassistant.apps.assistant.services.retriever_service import RetrieverTool
 
 
 class DummyDocument:
@@ -31,7 +31,7 @@ def test_retrieve_returns_formatted_output(monkeypatch):
         "galapassistant.apps.assistant.services.embedding_service.EmbeddingService.build_vector_database",
         dummy_build_vector_database,
     )
-    retriever = RetrieverService()
+    retriever = RetrieverTool()
     k = 3
     query = "Test query"
     actual_result = retriever.retrieve(query, k=k)
@@ -57,7 +57,7 @@ def test_retrieve_empty(monkeypatch):
         "galapassistant.apps.assistant.services.embedding_service.EmbeddingService.build_vector_database",
         dummy_build_vector_database_empty,
     )
-    retriever = RetrieverService()
+    retriever = RetrieverTool()
     query = "Test query"
     actual_result = retriever.retrieve(query)
     actual_expected = "\nRetrieved documents:\n"

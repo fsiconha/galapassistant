@@ -80,7 +80,7 @@ def mock_assistant_service(monkeypatch):
         lambda: MockChain("dummy response")
     )
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.retriever_service.RetrieverService.retrieve",
+        "galapassistant.apps.assistant.services.retriever_service.RetrieverTool.retrieve",
         lambda self, query: "dummy query"
     )
     return service
