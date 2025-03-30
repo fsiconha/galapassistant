@@ -17,14 +17,12 @@ class RetrieverTool(Tool):
     }
     output_type = "string"
 
-    def __init__(self, docs, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        vector_store = EmbeddingService()
-        self.retriever = vector_store.from_documents(
-            docs, k=10
-        )
+        embedding_service = EmbeddingService()
+        self.knowledge_vector_database = embedding_service.build_vector_database()
 
-    def forward(self, query: str) -> str:
+    def forward(self, query: str, k: int) -> str:
         """
         Retrieves the top matching documents for the provided query.
         
@@ -37,12 +35,11 @@ class RetrieverTool(Tool):
         """
         assert isinstance(query, str), "Your search query must be a string"
 
-        docs = self.retriever.invoke(
+        docs = self.knowledge_vector_database.similarity_search(
             query,
+            k=7,
         )
+
         return "\nRetrieved documents:\n" + "".join(
-            [
-                f"\n\n===== Document {str(i)} =====\n" + doc.page_content
-                for i, doc in enumerate(docs)
-            ]
+            [f"===== Document {str(i)} =====\n" + doc.page_content for i, doc in enumerate(docs)]
         )
