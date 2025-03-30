@@ -92,8 +92,15 @@ class EmbeddingService:
         for doc in knowledge_base:
             doc_chunks += text_splitter.split_documents([doc])
 
+        unique_texts = {}
+        unique_doc_chunks = []
+        for doc in doc_chunks:
+            if doc.page_content not in unique_texts:
+                unique_texts[doc.page_content] = True
+                unique_doc_chunks.append(doc)
+
         knowledge_vector_database = FAISS.from_documents(
-            doc_chunks,
+            unique_doc_chunks,
             embedding_model,
             distance_strategy=DistanceStrategy.COSINE,
         )
