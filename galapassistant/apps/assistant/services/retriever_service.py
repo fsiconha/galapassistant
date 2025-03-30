@@ -3,6 +3,8 @@ from smolagents import Tool
 from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
 
 
+TOP_K_RETRIEVED_DOCUMENTS = 5
+
 class RetrieverTool(Tool):
     """
     Tool for retrieving documents from a vector store based on a query.
@@ -13,7 +15,11 @@ class RetrieverTool(Tool):
         "query": {
             "type": "string",
             "description": "The query to perform. This should be semantically close to your target documents. Use the affirmative form rather than a question.",
-        }
+        },
+        "k": {
+            "type": "integer",
+            "description": "The number of top documents to retrieve.",
+        },
     }
     output_type = "string"
 
@@ -37,7 +43,7 @@ class RetrieverTool(Tool):
 
         docs = self.knowledge_vector_database.similarity_search(
             query,
-            k=7,
+            k=TOP_K_RETRIEVED_DOCUMENTS,
         )
 
         return "\nRetrieved documents:\n" + "".join(
