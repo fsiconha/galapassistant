@@ -23,13 +23,6 @@ torch.set_num_threads(1)
 
 
 EMBEDDING_MODEL_NAME = "thenlper/gte-base"
-CHUNK_SIKE = 500
-MARKDOWN_SEPARATORS = [
-    "\n\n",
-    "\n",
-    # ".",
-    # " ",
-]
 
 class EmbeddingService:
     """
@@ -54,26 +47,20 @@ class EmbeddingService:
 
     def build_vector_database(
         self,
-        chunk_size: Optional[int] = CHUNK_SIKE,
         knowledge_base: Optional[List[LangchainDocument]] = None,
-        tokenizer_name: Optional[str] = EMBEDDING_MODEL_NAME,
     ):
         """
         Builds a FAISS vector database from the provided knowledge base.
 
         If no knowledge base is provided, it loads the default knowledge base from a file.
-        The text is split into chunks using a RecursiveCharacterTextSplitter with a specified
+        The text is split into chunks using a SemanticChunker with a specified
         chunk size and overlap. Then, each document chunk is embedded using a HuggingFace model,
         and the resulting embeddings are stored in a FAISS index for fast similarity search using
         cosine distance.
 
         Args:
-            chunk_size (Optional[int], optional): The maximum number of tokens in each chunk.
-                Defaults to CHUNK_SIKE.
             knowledge_base (Optional[List[LangchainDocument]], optional): A list of documents
                 to build the vector database. If not provided, the default knowledge base file is used.
-            tokenizer_name (Optional[str], optional): The name of the HuggingFace model used for
-                tokenization and embeddings. Defaults to EMBEDDING_MODEL_NAME.
 
         Returns:
             FAISS: An instance of the FAISS vector store built from the document chunks.
