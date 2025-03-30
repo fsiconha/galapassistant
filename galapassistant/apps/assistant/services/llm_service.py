@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
-from langchain.prompts import ChatPromptTemplate
+
 from smolagents import HfApiModel, ToolCallingAgent
 
 from galapassistant.apps.assistant.services.retriever_service import RetrieverTool
@@ -30,17 +30,6 @@ class AssistantLLMService:
             token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
             temperature=0.3,
         )
-        prompt_instructions = [
-            {
-                "role": "system",
-                "content": "Your name is GalapAssistant, the smart assistant from Galápagos Islands. You are a specialized and polite assistant that knows everything about the book The Origin of Species, because you have this book as your knowledge base. Respond only to the question asked. Response should be concise, comprehensive and relevant to the question. If the answer cannot be deduced from the context, do not give an answer and report this. Here is the context, your knoledge base. Context: {context}",
-            },
-            {
-                "role": "user",
-                "content": "Here is the question you need to answer using the information contained in the context. Question: {question}",
-            },
-        ]
-        self.prompt = ChatPromptTemplate(prompt_instructions)
 
     def generate_answer(self, user_query: str) -> str:
         """
@@ -54,10 +43,10 @@ class AssistantLLMService:
         """
         retriever = RetrieverTool()
         self.agent = ToolCallingAgent(
-            tools=[retriever], model=self.llm, verbosity_level=2
+            tools=[retriever],
+            model=self.llm,
+            verbosity_level=2
         )
-        agent_chain = self.prompt | self.agent | StrOutputParser()
-        chain_input = {"context": retriever, "question": user_query}
-        response = agent_chain.invoke(chain_input)
+        response = self.agent.run(user_query)
 
         return response
