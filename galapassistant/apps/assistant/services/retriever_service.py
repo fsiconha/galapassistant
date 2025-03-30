@@ -3,7 +3,7 @@ from smolagents import Tool
 from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
 
 
-TOP_K_RETRIEVED_DOCUMENTS = 5
+TOP_K_RETRIEVED_DOCUMENTS = 3
 
 class RetrieverTool(Tool):
     """
