@@ -61,7 +61,6 @@ def test_build_vector_database_with_custom_knowledge_base(monkeypatch, mock_know
     knowledge base is provided.
     """
     service = EmbeddingService()
-    knowledge_base = mock_knowledge_base
 
     monkeypatch.setattr(
         "galapassistant.apps.assistant.services.embedding_service.SemanticChunker",
@@ -75,11 +74,9 @@ def test_build_vector_database_with_custom_knowledge_base(monkeypatch, mock_know
         "galapassistant.apps.assistant.services.embedding_service.FAISS",
         type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
-    actual_vector_store = service.build_vector_database(
-        chunk_size=100, knowledge_base=knowledge_base, tokenizer_name="dummy_model"
-    )
+    actual_vector_store = service.build_vector_database(knowledge_base=mock_knowledge_base)
     expected_chunks = []
-    for doc in knowledge_base:
+    for doc in mock_knowledge_base:
         text = doc.page_content
         mid = len(text) // 2
         expected_chunks.extend([
@@ -112,9 +109,7 @@ def test_build_vector_database_with_default_knowledge_base(monkeypatch):
         "galapassistant.apps.assistant.services.embedding_service.FAISS",
         type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
-    actual_vector_store = service.build_vector_database(
-        chunk_size=100, knowledge_base=None, tokenizer_name="dummy_model"
-    )
+    actual_vector_store = service.build_vector_database(knowledge_base=None)
     text = default_doc.page_content
     mid = len(text) // 2
     expected_chunks = [
