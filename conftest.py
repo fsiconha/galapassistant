@@ -3,10 +3,10 @@ import django
 import pytest
 from typing import List
 
+from langchain_core.language_models.fake import FakeListLLM
 from langchain.docstore.document import Document as LangchainDocument
 
 from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
-
 
 
 os.environ.setdefault(
@@ -48,8 +48,8 @@ def mock_knowledge_base() -> List[LangchainDocument]:
     if documents:
         sample_text = sample_paragraphs_from_document(
             documents[0],
-            num_paragraphs=8,
-            chars_per_paragraph=1000
+            num_paragraphs=3,
+            chars_per_paragraph=500
         )
         return [LangchainDocument(page_content=sample_text)]
     return documents
@@ -68,19 +68,19 @@ class MockChain:
 @pytest.fixture
 def mock_assistant_service(monkeypatch):
     """
-    Patch the __init__ method of AssistantLLMService to a no-op,
-    then create an instance and assign lightweight mocks to its attributes.
+    Create an instance of AssistantLLMService with a FakeListLLM,
+    and patch its chain components so that generate_answer returns
+    the fake LLM response.
     """
-    monkeypatch.setattr(AssistantLLMService, "__init__", lambda self: None)
-    service = AssistantLLMService()
-    service.prompt = MockChain("dummy response")
-    service.llm = MockChain("dummy response")
+    service = AssistantLLMService.__new__(AssistantLLMService)
+    fake_llm = FakeListLLM(["dummy response"])
+    service.llm = fake_llm
+    service.prompt = IdentityChain(fake_llm)
     monkeypatch.setattr(
         "galapassistant.apps.assistant.services.llm_service.StrOutputParser",
-        lambda: MockChain("dummy response")
+        lambda: IdentityChain(fake_llm)
     )
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.retriever_service.RetrieverTool",
-        lambda self, query: "dummy query"
-    )
+    from galapassistant.apps.assistant.services.retriever_service import RetrieverService
+    monkeypatch.setattr(RetrieverService, "retrieve", lambda self, query: "dummy context")
+    service.generate_answer = service.generate_answer
     return service

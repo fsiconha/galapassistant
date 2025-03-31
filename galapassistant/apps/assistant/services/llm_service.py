@@ -29,6 +29,7 @@ class AssistantLLMService:
             model_id=LLM_MODEL_NAME,
             token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
             temperature=0.3,
+            max_new_tokens=512
         )
 
     def generate_answer(self, user_query: str) -> str:

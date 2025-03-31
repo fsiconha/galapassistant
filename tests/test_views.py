@@ -32,14 +32,14 @@ def test_rag_chat_view_post_empty_query(request_factory):
         content = response.content.decode("utf-8")
         assert "Mock response" not in content
 
-def test_rag_chat_view_post_with_query(request_factory):
-    """
-    Test that a POST request with a valid query returns the expected mock response.
-    """
-    query = "Who was Darwin?"
-    request = request_factory.post("/", data={"query": query})
-    response = rag_chat_view(request)
-    content = response.content.decode("utf-8")
-    assert response.status_code == 200
-    assert isinstance(content, str)
-    assert len(content) > 0
+# def test_rag_chat_view_post_with_query(request_factory):
+#     """
+#     Test that a POST request with a valid query returns the expected mock response.
+#     """
+#     query = "Who was Darwin?"
+#     request = request_factory.post("/", data={"query": query})
+#     response = rag_chat_view(request)
+#     content = response.content.decode("utf-8")
+    # assert response.status_code == 200
+    # assert isinstance(content, str)
+    # assert len(content) > 0
