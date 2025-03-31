@@ -8,7 +8,6 @@ from langchain.docstore.document import Document as LangchainDocument
 from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
 
 
-
 os.environ.setdefault(
     'DJANGO_SETTINGS_MODULE', 'galapassistant.settings.settings'
 )
@@ -48,39 +47,8 @@ def mock_knowledge_base() -> List[LangchainDocument]:
     if documents:
         sample_text = sample_paragraphs_from_document(
             documents[0],
-            num_paragraphs=8,
-            chars_per_paragraph=1000
+            num_paragraphs=3,
+            chars_per_paragraph=500
         )
         return [LangchainDocument(page_content=sample_text)]
     return documents
-
-class MockChain:
-    """A mock chain to simulate the rag_chain's invoke method."""
-    def __init__(self, response):
-        self.response = response
-
-    def __or__(self, other):
-        return self
-
-    def invoke(self, query):
-        return self.response
-
-@pytest.fixture
-def mock_assistant_service(monkeypatch):
-    """
-    Patch the __init__ method of AssistantLLMService to a no-op,
-    then create an instance and assign lightweight mocks to its attributes.
-    """
-    monkeypatch.setattr(AssistantLLMService, "__init__", lambda self: None)
-    service = AssistantLLMService()
-    service.prompt = MockChain("dummy response")
-    service.llm = MockChain("dummy response")
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.llm_service.StrOutputParser",
-        lambda: MockChain("dummy response")
-    )
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.retriever_service.RetrieverService.retrieve",
-        lambda self, query: "dummy query"
-    )
-    return service
