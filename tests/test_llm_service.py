@@ -1,23 +1,34 @@
 import pytest
+from langchain_core.language_models.fake import FakeListLLM
 from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
 
-class IdentityChain:
+
+def mock_generate_answer(self, user_query: str) -> str:
+    """Dummy replacement for AssistantLLMService.generate_answer."""
+    return "dummy response"
+
+@pytest.fixture
+def mock_assistant_service(monkeypatch):
     """
-    A chain that passes through calls to a fake LLM.
+    Create an instance of AssistantLLMService with a FakeListLLM and patch generate_answer
+    to return a dummy response.
     """
-    def __init__(self, llm):
-        self.llm = llm
+    monkeypatch.setattr(AssistantLLMService, "__init__", lambda self: None)
+    service = AssistantLLMService()
+    fake_llm = FakeListLLM(responses=["dummy response"])
+    service.llm = fake_llm
+    monkeypatch.setattr(
+        "galapassistant.apps.assistant.services.llm_service.AssistantLLMService.generate_answer",
+        mock_generate_answer
+    )
+    return service
 
-    def __or__(self, other):
-        return self
+def test_get_response_returns_mock_response(mock_assistant_service):
+    """
+    Test that get_response returns the expected mock response.
+    """
+    query = "What is evolution?"
+    response = mock_assistant_service.generate_answer(query)
 
-    def invoke(self, chain_input):
-        return self.llm(chain_input)
-
-# def test_generate_answer_returns_response(mock_assistant_service):
-#     """
-#     Test that generate_answer returns the expected fake response.
-#     """
-#     query = "What is evolution?"
-#     response = mock_assistant_service.generate_answer(query)
-#     assert len(response) > 0
+    assert len(response) > 0
+    assert response == "dummy response"

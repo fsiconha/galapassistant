@@ -3,7 +3,6 @@ import django
 import pytest
 from typing import List
 
-from langchain_core.language_models.fake import FakeListLLM
 from langchain.docstore.document import Document as LangchainDocument
 
 from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
@@ -53,34 +52,3 @@ def mock_knowledge_base() -> List[LangchainDocument]:
         )
         return [LangchainDocument(page_content=sample_text)]
     return documents
-
-class MockChain:
-    """A mock chain to simulate the rag_chain's invoke method."""
-    def __init__(self, response):
-        self.response = response
-
-    def __or__(self, other):
-        return self
-
-    def invoke(self, query):
-        return self.response
-
-@pytest.fixture
-def mock_assistant_service(monkeypatch):
-    """
-    Create an instance of AssistantLLMService with a FakeListLLM,
-    and patch its chain components so that generate_answer returns
-    the fake LLM response.
-    """
-    service = AssistantLLMService.__new__(AssistantLLMService)
-    fake_llm = FakeListLLM(["dummy response"])
-    service.llm = fake_llm
-    service.prompt = IdentityChain(fake_llm)
-    monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.llm_service.StrOutputParser",
-        lambda: IdentityChain(fake_llm)
-    )
-    from galapassistant.apps.assistant.services.retriever_service import RetrieverService
-    monkeypatch.setattr(RetrieverService, "retrieve", lambda self, query: "dummy context")
-    service.generate_answer = service.generate_answer
-    return service
