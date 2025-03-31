@@ -1,13 +1,4 @@
 import os
-# Disable parallelism for tokenizers to avoid fork-related warnings
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-
-import multiprocessing
-# Change the start method to spawn (especially useful on macOS)
-multiprocessing.set_start_method("spawn", force=True)
-
 from typing import List, Optional
 
 import faiss

@@ -1,51 +1,26 @@
-from smolagents import Tool
+from langchain.agents import Tool
 
 from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
+from galapassistant.apps.assistant.services.utils import AgentUtils
 
 
 TOP_K_RETRIEVED_DOCUMENTS = 3
 
 class RetrieverTool(Tool):
-    """
-    Tool for retrieving documents from a vector store based on a query.
-    """
-    name = "retriever"
-    description = "Uses semantic search to retrieve the parts of transformers documentation that could be most relevant to answer your query."
-    inputs = {
-        "query": {
-            "type": "string",
-            "description": "The query to perform. This should be semantically close to your target documents. Use the affirmative form rather than a question.",
-        },
-        "k": {
-            "type": "integer",
-            "description": "The number of top documents to retrieve.",
-        },
-    }
-    output_type = "string"
+    def __init__(self):
+        utils = AgentUtils()
+        self.rag_chain = utils.get_rag_chain()
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        embedding_service = EmbeddingService()
-        self.knowledge_vector_database = embedding_service.build_vector_database()
-
-    def forward(self, query: str, k: int) -> str:
-        """
-        Retrieves the top matching documents for the provided query.
-        
-        Args:
-            query (str): The input query text used to perform similarity search.
-            k (int, optional): The number of top documents to retrieve. Defaults to 2.
-        
-        Returns:
-            str: A formatted string containing the retrieved documents.
-        """
-        assert isinstance(query, str), "Your search query must be a string"
-
-        docs = self.knowledge_vector_database.similarity_search(
-            query,
-            k=TOP_K_RETRIEVED_DOCUMENTS,
+    def get_retriever_tool(self):
+        retriever_tool = Tool(
+            name="OriginOfSpeciesRetriever",
+            func=self.rag_chain.run,
+            description=(
+                "Use this function to retrieve documents about the Origin of Species. "
+                "The book Origin of Species is your knowledge base. "
+                "INPUT are questions about Darwinism topics "
+                "OUTPUT concise and relevant answer to the question, based on the knowledge base."
+            )
         )
 
-        return "\nRetrieved documents:\n" + "".join(
-            [f"===== Document {str(i)} =====\n" + doc.page_content for i, doc in enumerate(docs)]
-        )
+        return retriever_tool
