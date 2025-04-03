@@ -10,7 +10,13 @@ class RetrieverTool(Tool):
     Tool for retrieving documents from a vector store based on a query.
     """
     name = "retriever"
-    description = "Uses semantic search to retrieve the parts of transformers documentation that could be most relevant to answer your query."
+    description = (
+        "Uses semantic search to retrieve the parts of embedded documentation "
+        "that could be most relevant to the input query and to compose its context and answer your query."
+        "Using the information contained in the context and give a comprehensive answer to the question. "
+        "Respond only to the question asked. "
+        "Response should be concise and relevant to the question. "
+    )
     inputs = {
         "query": {
             "type": "string",
@@ -18,7 +24,7 @@ class RetrieverTool(Tool):
         },
         "k": {
             "type": "integer",
-            "description": "The number of top documents to retrieve.",
+            "description": "The number of most similar documents to retrieve.",
         },
     }
     output_type = "string"

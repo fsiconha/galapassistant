@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
+from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 from smolagents import HfApiModel, ToolCallingAgent
 
 from galapassistant.apps.assistant.services.retriever_service import RetrieverTool
@@ -9,12 +10,6 @@ from galapassistant.apps.assistant.services.retriever_service import RetrieverTo
 load_dotenv()
 
 LLM_MODEL_NAME = "HuggingFaceH4/zephyr-7b-beta" ##Other models: "MaziyarPanahi/calme-3.1-instruct-78b", "meta-llama/Llama-3.1-70B-Instruct"
-FILE_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    ".knowledge_base",
-    "the Origin of Species.txt"
-)
 
 class AssistantLLMService:
     """
@@ -27,7 +22,8 @@ class AssistantLLMService:
         self.llm = HfApiModel(
             model_id=LLM_MODEL_NAME,
             token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
-            temperature=0.3
+            temperature=0.3,
+            max_tokens=256
         )
 
     def generate_answer(self, user_query: str) -> str:
