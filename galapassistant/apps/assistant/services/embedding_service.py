@@ -17,6 +17,7 @@ from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
+from uuid import uuid4
 
 import torch
 torch.set_num_threads(1)
@@ -99,10 +100,27 @@ class EmbeddingService:
                 unique_texts[doc.page_content] = True
                 unique_doc_chunks.append(doc)
 
-        knowledge_vector_database = FAISS.from_documents(
-            unique_doc_chunks,
-            embedding_model,
-            distance_strategy=DistanceStrategy.COSINE,
+        dim = len(embedding_model.embed_query(unique_doc_chunks[0].page_content))
+        index = faiss.IndexFlatL2(dim)
+
+        vector_store = FAISS(
+            embedding_function=embedding_model,
+            index=index,
+            docstore=InMemoryDocstore(),
+            index_to_docstore_id={},
         )
+
+        uuids = [str(uuid4()) for _ in range(len(unique_doc_chunks))]
+        knowledge_vector_database = (
+            vector_store.add_documents(
+                documents=unique_doc_chunks, ids=uuids
+            )
+        )
+
+        # knowledge_vector_database = FAISS.from_documents(
+        #     unique_doc_chunks,
+        #     embedding_model,
+        #     distance_strategy=DistanceStrategy.COSINE,
+        # )
 
         return knowledge_vector_database
