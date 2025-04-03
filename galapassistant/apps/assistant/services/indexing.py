@@ -1,37 +1,23 @@
 import os
-# Disable parallelism for tokenizers to avoid fork-related warnings
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-
-import multiprocessing
-# Change the start method to spawn (especially useful on macOS)
-multiprocessing.set_start_method("spawn", force=True)
-
 from typing import List, Optional
 
-import faiss
-from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
 
-import torch
-torch.set_num_threads(1)
-
 
 EMBEDDING_MODEL_NAME = "thenlper/gte-base"
 
-class EmbeddingService:
+class IndexingService:
     """
-    Service for loading a knowledge base and building a vector database for document retrieval.
+    Service for loading a knowledge base, embedding the documents and building a vector database for document retrieval.
     """
     def load_knowledge_base(self, file_path: str) -> List[LangchainDocument]:
         """
-        Loads the knowledge base from a text file.
-        Opens the file specified by 'file_path', reads its entire content, and returns
+        Loads the knowledge base from a text file. Opens the file
+        specified by 'file_path', reads its entire content, and returns
         a list containing a single LangChain Document with the file content.
 
         Args:
@@ -40,10 +26,13 @@ class EmbeddingService:
         Returns:
             List[LangchainDocument]: A list with one Document containing the file content.
         """
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        return [LangchainDocument(page_content=content)]
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return [LangchainDocument(page_content=content)]
+        except Exception as e:
+            print(f"Error loading knowledge base from {file_path}: {e}")
+            return []
 
     def build_vector_database(
         self,
@@ -53,10 +42,9 @@ class EmbeddingService:
         Builds a FAISS vector database from the provided knowledge base.
 
         If no knowledge base is provided, it loads the default knowledge base from a file.
-        The text is split into chunks using a SemanticChunker with a specified
-        chunk size and overlap. Then, each document chunk is embedded using a HuggingFace model,
-        and the resulting embeddings are stored in a FAISS index for fast similarity search using
-        cosine distance.
+        The text is split into chunks using a SemanticChunker. Then, each document chunk
+        is embedded using a HuggingFace model, and the resulting embeddings are stored
+        in a FAISS index for similarity search using cosine distance.
 
         Args:
             knowledge_base (Optional[List[LangchainDocument]], optional): A list of documents

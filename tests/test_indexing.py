@@ -1,13 +1,11 @@
 import pytest
+from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain.docstore.document import Document as LangchainDocument
-from galapassistant.apps.assistant.services.embedding_service import (
-    EmbeddingService,
-    DistanceStrategy,
-)
+from galapassistant.apps.assistant.services.indexing import IndexingService
 
 
-class DummyFAISS:
-    """A dummy FAISS vector store to simulate the FAISS index."""
+class MockFAISS:
+    """A mocked FAISS vector store to simulate the FAISS index."""
     def __init__(self, docs, embedding_model, distance_strategy):
         self.docs = docs
         self.embedding_model = embedding_model
@@ -18,9 +16,8 @@ class DummyFAISS:
 
 
 def dummy_from_documents(docs, embedding_model, distance_strategy):
-    """Return a DummyFAISS instance."""
-    return DummyFAISS(docs, embedding_model, distance_strategy)
-
+    """Return a MockFAISS instance."""
+    return MockFAISS(docs, embedding_model, distance_strategy)
 
 class MockSemanticChunker:
     """A mock semantic chunker that splits each document into two chunks."""
@@ -54,25 +51,24 @@ def test_load_knowledge_base(mock_knowledge_base):
     assert hasattr(mock_knowledge_base[0], "page_content")
     assert isinstance(mock_knowledge_base[0].page_content, str)
 
-
 def test_build_vector_database_with_custom_knowledge_base(monkeypatch, mock_knowledge_base):
     """
     Test that build_vector_database correctly builds a vector database when a custom
     knowledge base is provided.
     """
-    service = EmbeddingService()
+    service = IndexingService()
 
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.SemanticChunker",
+        "galapassistant.apps.assistant.services.indexing.SemanticChunker",
         lambda *args, **kwargs: MockSemanticChunker()
     )
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.HuggingFaceEmbeddings",
+        "galapassistant.apps.assistant.services.indexing.HuggingFaceEmbeddings",
         MockEmbeddings
     )
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.FAISS",
-        type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
+        "galapassistant.apps.assistant.services.indexing.FAISS",
+        type("MockFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
     actual_vector_store = service.build_vector_database(knowledge_base=mock_knowledge_base)
     expected_chunks = []
@@ -84,30 +80,29 @@ def test_build_vector_database_with_custom_knowledge_base(monkeypatch, mock_know
             LangchainDocument(page_content=text[mid:])
         ])
 
-    assert isinstance(actual_vector_store, DummyFAISS)
+    assert isinstance(actual_vector_store, MockFAISS)
     assert actual_vector_store.docs == expected_chunks
     assert actual_vector_store.distance_strategy == DistanceStrategy.COSINE
-
 
 def test_build_vector_database_with_default_knowledge_base(monkeypatch):
     """
     Test that build_vector_database uses the default knowledge base when None is provided.
     """
-    service = EmbeddingService()
+    service = IndexingService()
     default_doc = LangchainDocument(page_content="Default test content.")
 
     monkeypatch.setattr(service, "load_knowledge_base", lambda file_path: [default_doc])
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.SemanticChunker",
+        "galapassistant.apps.assistant.services.indexing.SemanticChunker",
         lambda *args, **kwargs: MockSemanticChunker()
     )
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.HuggingFaceEmbeddings",
+        "galapassistant.apps.assistant.services.indexing.HuggingFaceEmbeddings",
         MockEmbeddings
     )
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.FAISS",
-        type("DummyFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
+        "galapassistant.apps.assistant.services.indexing.FAISS",
+        type("MockFAISSWrapper", (), {"from_documents": staticmethod(dummy_from_documents)})
     )
     actual_vector_store = service.build_vector_database(knowledge_base=None)
     text = default_doc.page_content
@@ -116,5 +111,6 @@ def test_build_vector_database_with_default_knowledge_base(monkeypatch):
         LangchainDocument(page_content=text[:mid]),
         LangchainDocument(page_content=text[mid:])
     ]
-    assert isinstance(actual_vector_store, DummyFAISS)
+    assert isinstance(actual_vector_store, MockFAISS)
     assert actual_vector_store.docs == expected_chunks
+    assert actual_vector_store.distance_strategy == DistanceStrategy.COSINE

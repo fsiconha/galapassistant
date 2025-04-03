@@ -5,7 +5,7 @@ from typing import List
 
 from langchain.docstore.document import Document as LangchainDocument
 
-from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
+from galapassistant.apps.assistant.services.generation import GenerationService
 
 
 os.environ.setdefault(
