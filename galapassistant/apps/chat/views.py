@@ -1,10 +1,10 @@
 import os
 from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse
-from galapassistant.apps.assistant.services.llm_service import AssistantLLMService
+from galapassistant.apps.assistant.services.generation import GenerationService
 
 
-assistant = AssistantLLMService()
+assistant = GenerationService()
 
 def rag_chat_view(request: HttpRequest) -> HttpResponse:
     """
