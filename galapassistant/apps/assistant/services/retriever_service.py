@@ -1,27 +1,33 @@
+from langchain_core.tools import tool
+
 from galapassistant.apps.assistant.services.embedding_service import EmbeddingService
 
+
+TOP_K_RETRIEVED_DOCUMENTS = 3
 
 class RetrieverService:
     """
     Service class for retrieving documents from a vector store based on a query.
     """
     def __init__(self):
-        service = EmbeddingService()
-        self.vector_store_retriever = service.build_vector_database()
+        vector_store_service = EmbeddingService()
+        self.retriever = vector_store_service.build_vector_database()
 
-    def retrieve(self, query: str, k: int = 5) -> str:
+    @tool
+    def retrieve(self, query: str, k: int = TOP_K_RETRIEVED_DOCUMENTS) -> str:
         """
         Retrieves the top matching documents for the provided query.
         
         Args:
             query (str): The input query text used to perform similarity search.
-            k (int, optional): The number of top documents to retrieve. Defaults to 2.
+            k (int, optional): The number of top documents to retrieve. Defaults to 3.
         
         Returns:
             str: A formatted string containing the retrieved documents.
         """
-        docs = self.vector_store_retriever.similarity_search(query, k=k)
-        result = "\nRetrieved documents:\n" + "".join(
-            [f"= Document {i} =\n{doc.page_content}\n" for i, doc in enumerate(docs)]
+        retrieved_docs = self.retriever.similarity_search(query, k=k)
+        serialized = "\n\n".join(
+            (f"Content: {doc.page_content}")
+            for doc in retrieved_docs
         )
-        return result
+        return serialized
