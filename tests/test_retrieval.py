@@ -1,6 +1,6 @@
 import pytest
 
-from galapassistant.apps.assistant.services.retriever_service import RetrieverTool
+from galapassistant.apps.assistant.services.retrieval import RetrieverTool
 
 
 class DummyDocument:
@@ -10,7 +10,7 @@ class DummyDocument:
         self.page_content = content
 
 
-class DummyVectorStore:
+class MockVectorStore:
     """A dummy vector store that returns a list of dummy documents."""
 
     def similarity_search(self, query, k):
@@ -18,8 +18,8 @@ class DummyVectorStore:
 
 
 def dummy_build_vector_database(self):
-    """Dummy replacement for EmbeddingService.build_vector_database."""
-    return DummyVectorStore()
+    """Dummy replacement for IndexingService.build_vector_database."""
+    return MockVectorStore()
 
 
 def test_retrieve_returns_formatted_output(monkeypatch):
@@ -28,14 +28,14 @@ def test_retrieve_returns_formatted_output(monkeypatch):
     returns a list of documents.
     """
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.EmbeddingService.build_vector_database",
+        "galapassistant.apps.assistant.services.indexing.IndexingService.build_vector_database",
         dummy_build_vector_database,
     )
     retriever = RetrieverTool()
     k = 3
     query = "Test query"
-    actual_result = retriever(query, k=k)
-    assert "Retrieved documents" in actual_result
+    actual_docs = retriever(query, k=k)
+    assert "Retrieved documents" in actual_docs
 
 
 def test_retrieve_empty(monkeypatch):
@@ -50,7 +50,7 @@ def test_retrieve_empty(monkeypatch):
         return EmptyVectorStore()
 
     monkeypatch.setattr(
-        "galapassistant.apps.assistant.services.embedding_service.EmbeddingService.build_vector_database",
+        "galapassistant.apps.assistant.services.indexing.IndexingService.build_vector_database",
         dummy_build_vector_database_empty,
     )
     retriever = RetrieverTool()
