@@ -41,6 +41,9 @@ $ poetry run python3 scripts/manage.py runserver
 http://127.0.0.1:8000
 ```
 
+#### Instructions
+You will need to have a hugging face API token and set it in `HUGGINGFACEHUB_API_TOKEN`
+
 ## Architecture
 
 <p align="center" style="margin: 3em">
